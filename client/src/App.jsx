@@ -5,7 +5,7 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { useAuth } from './hooks/useAuth';
 import { useCrypto } from './hooks/useCrypto';
-import { generateSalt } from './utils/crypto';
+import { generateSalt, deriveKey, hashKey } from './utils/crypto';
 
 function AuthWrapper() {
   const { user, token, loading, login, register, logout, getAuthHeader } = useAuth();
@@ -43,7 +43,14 @@ function AuthWrapper() {
       const result = await register(username, newSalt, keyHash);
 
       if (result.success) {
-        setIsCryptoReady(true);
+        // Auto-login after registration to get JWT token
+        const key = await deriveKey(password, newSalt);
+        const loginKeyHash = await hashKey(key);
+        const loginResult = await login(username, loginKeyHash);
+        if (loginResult.success) {
+          await crypto.initializeKeyFromKey(key);
+          setIsCryptoReady(true);
+        }
       }
 
       return result;
@@ -61,11 +68,11 @@ function AuthWrapper() {
   };
 
   useEffect(() => {
-    if (!token || loading) return;
-    if (token && !isCryptoReady) {
+    if (loading) return;
+    if (token && user && !isCryptoReady) {
       navigate('/login');
     }
-  }, [token, isCryptoReady, loading, navigate]);
+  }, [token, user, isCryptoReady, loading, navigate]);
 
   if (loading) {
     return (

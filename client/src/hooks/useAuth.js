@@ -19,7 +19,12 @@ export function useAuth() {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
         setToken(null);
+        setUser(null);
       }
+    } else if (token && !storedUser) {
+      // Stale token without user data — clear it
+      localStorage.removeItem(TOKEN_KEY);
+      setToken(null);
     }
     setLoading(false);
   }, [token]);
